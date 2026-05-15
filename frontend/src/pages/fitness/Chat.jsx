@@ -58,7 +58,7 @@ export default function Chat() {
     setMessages(prev => [...prev, assistantMsg])
 
     try {
-      const res = await fetch('/fitness/chat', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/fitness/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.id, message: text.trim() }),
