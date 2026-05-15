@@ -12,6 +12,14 @@ import Chat from './pages/fitness/Chat'
 import Nutrition from './pages/fitness/Nutrition'
 import Progress from './pages/fitness/Progress'
 import Program from './pages/fitness/Program'
+import StudyHome from './pages/study/StudyHome'
+import StudySetup from './pages/study/StudySetup'
+import StudyChat from './pages/study/Chat'
+import Flashcards from './pages/study/Flashcards'
+import MCQQuiz from './pages/study/MCQQuiz'
+import RevisionPlan from './pages/study/RevisionPlan'
+import UploadNotes from './pages/study/UploadNotes'
+import StudyProgress from './pages/study/Progress'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -38,6 +46,14 @@ export default function App() {
         <Route path="/dashboard/fitness/nutrition" element={<ProtectedRoute><Nutrition /></ProtectedRoute>} />
         <Route path="/dashboard/fitness/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/dashboard/fitness/program" element={<ProtectedRoute><Program /></ProtectedRoute>} />
+        <Route path="/dashboard/study" element={<ProtectedRoute><StudyHome /></ProtectedRoute>} />
+        <Route path="/dashboard/study/setup" element={<ProtectedRoute><StudySetup /></ProtectedRoute>} />
+        <Route path="/dashboard/study/chat" element={<ProtectedRoute><StudyChat /></ProtectedRoute>} />
+        <Route path="/dashboard/study/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
+        <Route path="/dashboard/study/quiz" element={<ProtectedRoute><MCQQuiz /></ProtectedRoute>} />
+        <Route path="/dashboard/study/revision" element={<ProtectedRoute><RevisionPlan /></ProtectedRoute>} />
+        <Route path="/dashboard/study/upload" element={<ProtectedRoute><UploadNotes /></ProtectedRoute>} />
+        <Route path="/dashboard/study/progress" element={<ProtectedRoute><StudyProgress /></ProtectedRoute>} />
       </Routes>
     </AnimatePresence>
   )

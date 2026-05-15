@@ -5,11 +5,13 @@ load_dotenv()
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from fitness import fitness_bp
+from study import study_bp
 
 app = Flask(__name__)
 CORS(app)
 
 app.register_blueprint(fitness_bp)
+app.register_blueprint(study_bp)
 
 @app.route('/api/health')
 def health():

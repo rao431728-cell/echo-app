@@ -13,6 +13,7 @@ export default {
           blue: '#3B82F6',
           orange: '#F97316',
           green: '#22C55E',
+          purple: '#8B5CF6',
         },
         muted: '#666666',
       },

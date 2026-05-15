@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:5001',
       '/fitness': 'http://127.0.0.1:5001',
+      '/study': 'http://127.0.0.1:5001',
     },
   },
 })

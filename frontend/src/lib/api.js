@@ -79,3 +79,74 @@ export function adjustProgram(data) {
     body: JSON.stringify(data),
   })
 }
+
+// Study API
+
+export function getStudyProfile(userId) {
+  return request(`/study/profile?user_id=${userId}`)
+}
+
+export function saveStudySetup(data) {
+  return request('/study/setup', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getStudyChatHistory(userId) {
+  return request(`/study/chat/history?user_id=${userId}`)
+}
+
+export function uploadStudyDocument(data) {
+  return request('/study/upload-document', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function generateFlashcards(data) {
+  return request('/study/generate-flashcards', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getFlashcards(userId) {
+  return request(`/study/flashcards?user_id=${userId}`)
+}
+
+export function reviewFlashcard(data) {
+  return request('/study/flashcards/review', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function generateMCQs(data) {
+  return request('/study/generate-mcqs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function generateRevisionPlan(data) {
+  return request('/study/generate-revision-plan', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function completeStudySession(data) {
+  return request('/study/complete-session', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getStudySessions(userId) {
+  return request(`/study/sessions?user_id=${userId}`)
+}
+
+export function getStudyDocuments(userId) {
+  return request(`/study/documents?user_id=${userId}`)
+}
