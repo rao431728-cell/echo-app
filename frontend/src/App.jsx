@@ -20,6 +20,7 @@ import MCQQuiz from './pages/study/MCQQuiz'
 import RevisionPlan from './pages/study/RevisionPlan'
 import UploadNotes from './pages/study/UploadNotes'
 import StudyProgress from './pages/study/Progress'
+import Websites from './pages/Websites'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/dashboard/study/revision" element={<ProtectedRoute><RevisionPlan /></ProtectedRoute>} />
         <Route path="/dashboard/study/upload" element={<ProtectedRoute><UploadNotes /></ProtectedRoute>} />
         <Route path="/dashboard/study/progress" element={<ProtectedRoute><StudyProgress /></ProtectedRoute>} />
+        <Route path="/dashboard/websites" element={<ProtectedRoute><Websites /></ProtectedRoute>} />
       </Routes>
     </AnimatePresence>
   )

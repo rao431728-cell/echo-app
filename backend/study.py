@@ -1,10 +1,13 @@
 import os
+import io
 import json
 import re
+import base64
 from datetime import date, timedelta
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 import anthropic
 from supabase import create_client
+from PyPDF2 import PdfReader
 
 study_bp = Blueprint('study', __name__)
 
@@ -171,13 +174,27 @@ def get_profile():
     )
 
 
+def _extract_pdf_text(b64_data):
+    pdf_bytes = base64.b64decode(b64_data)
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            pages.append(text)
+    return '\n\n'.join(pages)
+
+
 @study_bp.route('/study/chat', methods=['POST'])
 def chat():
     data = request.json
     user_id = data.get('user_id')
     message = data.get('message', '')
     document_context = data.get('document_context', '')
-    if not user_id or not message:
+    file_data = data.get('file_data')
+    file_type = data.get('file_type')
+    file_mime = data.get('file_mime')
+    if not user_id or (not message and not file_data):
         return jsonify(error='user_id and message required'), 400
 
     profile = _study_profile(user_id)
@@ -191,9 +208,33 @@ def chat():
         system += f"\n\nThe student has shared the following document/notes for context:\n\n{document_context[:8000]}"
 
     messages = [{'role': m['role'], 'content': m['content']} for m in recent]
-    messages.append({'role': 'user', 'content': message})
 
-    get_sb().table('study_messages').insert({'user_id': user_id, 'role': 'user', 'content': message}).execute()
+    if file_type == 'image' and file_data:
+        user_content = []
+        if message:
+            user_content.append({'type': 'text', 'text': message})
+        else:
+            user_content.append({'type': 'text', 'text': 'Please analyse this image and help me study from it. Describe what you see and explain any concepts, questions, or notes shown.'})
+        user_content.append({
+            'type': 'image',
+            'source': {
+                'type': 'base64',
+                'media_type': file_mime or 'image/jpeg',
+                'data': file_data,
+            },
+        })
+        messages.append({'role': 'user', 'content': user_content})
+    elif file_type == 'pdf' and file_data:
+        pdf_text = _extract_pdf_text(file_data)
+        combined = message or 'Please analyse these notes and help me study from them.'
+        if pdf_text:
+            combined += f"\n\n[Uploaded PDF content]:\n{pdf_text[:12000]}"
+        messages.append({'role': 'user', 'content': combined})
+    else:
+        messages.append({'role': 'user', 'content': message})
+
+    stored_msg = message or ('[Sent an image]' if file_type == 'image' else '[Uploaded a PDF]')
+    get_sb().table('study_messages').insert({'user_id': user_id, 'role': 'user', 'content': stored_msg}).execute()
 
     def generate():
         full_response = ''

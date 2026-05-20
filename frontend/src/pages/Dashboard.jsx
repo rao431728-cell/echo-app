@@ -17,7 +17,7 @@ const agents = [
   { emoji: '💰', name: 'Finance Agent', description: 'Expense tracking, budgeting, financial advice', status: 'COMING SOON' },
   { emoji: '💼', name: 'Business Agent', description: 'Strategy, marketing, operations advisor', status: 'COMING SOON' },
   { emoji: '🔬', name: 'Research Agent', description: 'Deep research with live web search', status: 'COMING SOON' },
-  { emoji: '🌐', name: 'Echo Websites', description: 'AI website builder — 6 agents, 60 seconds', status: 'COMING SOON' },
+  { emoji: '🌐', name: 'Echo Websites', description: 'AI website builder — 6 agents, 60 seconds', status: 'LIVE', path: '/dashboard/websites' },
 ]
 
 export default function Dashboard() {

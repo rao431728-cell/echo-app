@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getStudyChatHistory } from '../../lib/api'
 import Navbar from '../../components/Navbar'
 import StudyBottomNav from '../../components/StudyBottomNav'
-import { Send, Loader2, Upload, Layers } from 'lucide-react'
+import { Send, Loader2, Upload, X, FileText, Image as ImageIcon } from 'lucide-react'
 
 const defaultPrompts = [
   "Explain this concept simply",
@@ -56,7 +56,7 @@ function formatMessage(content) {
         return <div key={`${i}-${j}`} className="ml-4 my-0.5">{line}</div>
       }
       if (line.match(/^[-*]\s/)) {
-        return <div key={`${i}-${j}`} className="ml-4 my-0.5">• {line.slice(2)}</div>
+        return <div key={`${i}-${j}`} className="ml-4 my-0.5">{line.slice(2)}</div>
       }
       if (line.match(/^\*\*.*\*\*$/)) {
         return <div key={`${i}-${j}`} className="font-semibold my-1">{line.replace(/\*\*/g, '')}</div>
@@ -64,6 +64,19 @@ function formatMessage(content) {
       if (line.trim() === '') return <div key={`${i}-${j}`} className="h-2" />
       return <div key={`${i}-${j}`} className="my-0.5">{line.replace(/\*\*(.*?)\*\*/g, (_, t) => t)}</div>
     })
+  })
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result
+      const base64 = dataUrl.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
   })
 }
 
@@ -76,6 +89,7 @@ export default function StudyChat() {
   const [streaming, setStreaming] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [documentContext, setDocumentContext] = useState('')
+  const [attachedFile, setAttachedFile] = useState(null)
   const bottomRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -98,19 +112,49 @@ export default function StudyChat() {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    e.target.value = ''
 
-    if (file.type === 'application/pdf') {
-      const text = await file.text()
-      setDocumentContext(text.slice(0, 8000))
-    } else {
-      const text = await file.text()
-      setDocumentContext(text.slice(0, 8000))
+    const isImage = file.type.startsWith('image/')
+    const isPdf = file.type === 'application/pdf'
+
+    if (!isImage && !isPdf) return
+
+    const base64 = await readFileAsBase64(file)
+
+    if (isImage) {
+      setAttachedFile({
+        name: file.name,
+        type: 'image',
+        mime: file.type,
+        base64,
+        previewUrl: URL.createObjectURL(file),
+      })
+    } else if (isPdf) {
+      setAttachedFile({
+        name: file.name,
+        type: 'pdf',
+        mime: file.type,
+        base64,
+        previewUrl: null,
+      })
     }
   }
 
+  const clearAttachment = () => {
+    if (attachedFile?.previewUrl) URL.revokeObjectURL(attachedFile.previewUrl)
+    setAttachedFile(null)
+  }
+
   const sendMessage = async (text) => {
-    if (!text.trim() || streaming) return
-    const userMsg = { role: 'user', content: text.trim() }
+    if ((!text.trim() && !attachedFile) || streaming) return
+
+    const userMsg = { role: 'user', content: text.trim() || '' }
+    if (attachedFile?.type === 'image') {
+      userMsg.imageUrl = attachedFile.previewUrl
+    }
+    if (attachedFile?.type === 'pdf') {
+      userMsg.pdfName = attachedFile.name
+    }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setStreaming(true)
@@ -118,15 +162,26 @@ export default function StudyChat() {
     const assistantMsg = { role: 'assistant', content: '' }
     setMessages(prev => [...prev, assistantMsg])
 
+    const body = {
+      user_id: user.id,
+      message: text.trim(),
+      document_context: documentContext,
+    }
+
+    if (attachedFile) {
+      body.file_data = attachedFile.base64
+      body.file_type = attachedFile.type
+      body.file_mime = attachedFile.mime
+    }
+
+    const currentAttachment = attachedFile
+    clearAttachment()
+
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/study/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.id,
-          message: text.trim(),
-          document_context: documentContext,
-        }),
+        body: JSON.stringify(body),
       })
 
       const reader = res.body.getReader()
@@ -184,7 +239,7 @@ export default function StudyChat() {
 
       {documentContext && (
         <div className="bg-brand-purple/10 border-b border-brand-purple/20 px-4 py-2 flex items-center justify-between">
-          <span className="text-xs text-brand-purple font-medium">📄 Document attached — tutor has context</span>
+          <span className="text-xs text-brand-purple font-medium">Document attached — tutor has context</span>
           <button onClick={() => setDocumentContext('')} className="text-xs text-muted hover:text-white transition-colors">Remove</button>
         </div>
       )}
@@ -216,6 +271,15 @@ export default function StudyChat() {
                     ? 'bg-brand-purple text-white'
                     : 'bg-dark-card border border-dark-border text-gray-200'
                 }`}>
+                  {msg.imageUrl && (
+                    <img src={msg.imageUrl} alt="Attached" className="rounded-lg mb-2 max-h-48 object-contain" />
+                  )}
+                  {msg.pdfName && (
+                    <div className="flex items-center gap-2 mb-2 bg-white/10 rounded-lg px-3 py-2 text-xs">
+                      <FileText size={14} />
+                      <span>{msg.pdfName}</span>
+                    </div>
+                  )}
                   {msg.content ? (
                     msg.role === 'assistant' ? formatMessage(msg.content) : msg.content
                   ) : (
@@ -230,19 +294,39 @@ export default function StudyChat() {
       </div>
 
       <div className="sticky bottom-0 bg-dark-bg/90 backdrop-blur-xl border-t border-dark-border p-4 pb-20 md:pb-4">
+        {attachedFile && (
+          <div className="max-w-2xl mx-auto mb-2">
+            <div className="inline-flex items-center gap-2 bg-dark-card border border-brand-purple/30 rounded-xl px-3 py-2">
+              {attachedFile.type === 'image' ? (
+                <img src={attachedFile.previewUrl} alt="Preview" className="h-16 w-16 object-cover rounded-lg" />
+              ) : (
+                <div className="h-16 w-16 flex items-center justify-center bg-brand-purple/10 rounded-lg">
+                  <FileText size={24} className="text-brand-purple" />
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span className="text-xs text-white font-medium truncate max-w-[160px]">{attachedFile.name}</span>
+                <span className="text-[10px] text-muted uppercase">{attachedFile.type === 'image' ? 'Image' : 'PDF'}</span>
+              </div>
+              <button onClick={clearAttachment} className="ml-2 p-1 text-muted hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto flex gap-2">
-          <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.txt,.md"
+          <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,image/*"
             onChange={handleFileUpload} />
           <button type="button" onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-3 bg-dark-card border border-dark-border hover:border-brand-purple/50 text-muted hover:text-brand-purple rounded-xl transition-colors"
-            title="Upload notes">
+            className={`px-3 py-3 bg-dark-card border hover:border-brand-purple/50 text-muted hover:text-brand-purple rounded-xl transition-colors ${attachedFile ? 'border-brand-purple/50 text-brand-purple' : 'border-dark-border'}`}
+            title="Upload image or PDF">
             <Upload size={18} />
           </button>
           <input value={input} onChange={e => setInput(e.target.value)}
-            placeholder="Ask your tutor anything..."
+            placeholder={attachedFile ? "Add a message (optional)..." : "Ask your tutor anything..."}
             disabled={streaming}
             className="flex-1 px-4 py-3 bg-dark-card border border-dark-border rounded-xl text-white placeholder-muted focus:outline-none focus:border-brand-purple transition-colors disabled:opacity-50" />
-          <button type="submit" disabled={!input.trim() || streaming}
+          <button type="submit" disabled={(!input.trim() && !attachedFile) || streaming}
             className="px-4 py-3 bg-brand-purple hover:bg-purple-600 disabled:opacity-30 text-white rounded-xl transition-colors">
             <Send size={18} />
           </button>
