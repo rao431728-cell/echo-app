@@ -11,7 +11,7 @@ from PyPDF2 import PdfReader
 
 study_bp = Blueprint('study', __name__)
 
-MODEL = 'claude-sonnet-4-5'
+MODEL = 'claude-sonnet-4-6'
 
 _sb = None
 _claude = None

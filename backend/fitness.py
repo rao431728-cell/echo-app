@@ -8,7 +8,7 @@ from supabase import create_client
 
 fitness_bp = Blueprint('fitness', __name__)
 
-MODEL = 'claude-opus-4-5'
+MODEL = 'claude-opus-4-6'
 
 _sb = None
 _claude = None
