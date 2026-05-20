@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
@@ -86,10 +86,11 @@ export default function GameHome() {
     remixBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [remixMessages])
 
-  useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe || !gameHtml) return
-    iframe.srcdoc = gameHtml
+  const gameIframeRef = useCallback((node) => {
+    iframeRef.current = node
+    if (node && gameHtml) {
+      node.srcdoc = gameHtml
+    }
   }, [gameHtml])
 
   const toggleFeature = (f) => {
@@ -356,7 +357,7 @@ export default function GameHome() {
               </div>
               {/* iframe */}
               <div className="flex-1 min-h-0 bg-black">
-                <iframe ref={iframeRef} title="Game Preview" className="w-full h-full border-0" />
+                <iframe ref={gameIframeRef} title="Game Preview" className="w-full h-full border-0" />
               </div>
             </div>
 

@@ -173,16 +173,19 @@ def generate_game():
         title_data = _extract_json(title_text)
         title = (title_data or {}).get('title', 'Untitled Game')
 
-        result = get_sb().table('game_builds').insert({
-            'user_id': user_id,
-            'title': title,
-            'description': prompt,
-            'html_content': html,
-            'genre': genre or None,
-            'plays': 0,
-        }).execute()
-
-        game_id = result.data[0]['id'] if result.data else None
+        game_id = None
+        try:
+            result = get_sb().table('game_builds').insert({
+                'user_id': user_id,
+                'title': title,
+                'description': prompt,
+                'html_content': html,
+                'genre': genre or None,
+                'plays': 0,
+            }).execute()
+            game_id = result.data[0]['id'] if result.data else None
+        except Exception:
+            pass
 
         return jsonify(html=html, title=title, game_id=game_id)
 
@@ -223,9 +226,12 @@ def remix_game():
             return jsonify(error='Remix failed. Try again.'), 500
 
         if game_id:
-            get_sb().table('game_builds').update({
-                'html_content': html,
-            }).eq('id', game_id).eq('user_id', user_id).execute()
+            try:
+                get_sb().table('game_builds').update({
+                    'html_content': html,
+                }).eq('id', game_id).eq('user_id', user_id).execute()
+            except Exception:
+                pass
 
         return jsonify(html=html, message='Game remixed successfully.')
 
