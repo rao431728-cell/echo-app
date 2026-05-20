@@ -14,7 +14,7 @@ function getGreeting() {
 const agents = [
   { emoji: '💪', name: 'Fitness Agent', description: 'AI personal trainer, meal scanner, workout tracker', status: 'LIVE', path: '/dashboard/fitness' },
   { emoji: '📚', name: 'Study Agent', description: 'AI tutor, flashcards, exam prep', status: 'LIVE', path: '/dashboard/study' },
-  { emoji: '💰', name: 'Finance Agent', description: 'Expense tracking, budgeting, financial advice', status: 'COMING SOON' },
+  { emoji: '🎮', name: 'Game Builder', description: 'Describe any game. AI builds it instantly.', status: 'LIVE', path: '/dashboard/games' },
   { emoji: '💼', name: 'Business Agent', description: 'Strategy, marketing, operations advisor', status: 'COMING SOON' },
   { emoji: '🔬', name: 'Research Agent', description: 'Deep research with live web search', status: 'COMING SOON' },
   { emoji: '🌐', name: 'Echo Websites', description: 'AI website builder — 6 agents, 60 seconds', status: 'LIVE', path: '/dashboard/websites' },

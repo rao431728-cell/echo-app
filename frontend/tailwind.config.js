@@ -14,6 +14,8 @@ export default {
           orange: '#F97316',
           green: '#22C55E',
           purple: '#8B5CF6',
+          emerald: '#10B981',
+          amber: '#F59E0B',
         },
         muted: '#666666',
       },

@@ -21,6 +21,9 @@ import RevisionPlan from './pages/study/RevisionPlan'
 import UploadNotes from './pages/study/UploadNotes'
 import StudyProgress from './pages/study/Progress'
 import Websites from './pages/Websites'
+import GameHome from './pages/games/GameHome'
+import GameLibrary from './pages/games/GameLibrary'
+import GameExplore from './pages/games/GameExplore'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -56,6 +59,9 @@ export default function App() {
         <Route path="/dashboard/study/upload" element={<ProtectedRoute><UploadNotes /></ProtectedRoute>} />
         <Route path="/dashboard/study/progress" element={<ProtectedRoute><StudyProgress /></ProtectedRoute>} />
         <Route path="/dashboard/websites" element={<ProtectedRoute><Websites /></ProtectedRoute>} />
+        <Route path="/dashboard/games" element={<ProtectedRoute><GameHome /></ProtectedRoute>} />
+        <Route path="/dashboard/games/library" element={<ProtectedRoute><GameLibrary /></ProtectedRoute>} />
+        <Route path="/dashboard/games/explore" element={<ProtectedRoute><GameExplore /></ProtectedRoute>} />
       </Routes>
     </AnimatePresence>
   )

@@ -45,3 +45,6 @@ input, textarea, select {
 .glow-orange {
   box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
 }
+.glow-emerald {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.3), 0 0 60px rgba(16, 185, 129, 0.1);
+}

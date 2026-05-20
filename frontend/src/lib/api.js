@@ -150,3 +150,45 @@ export function getStudySessions(userId) {
 export function getStudyDocuments(userId) {
   return request(`/study/documents?user_id=${userId}`)
 }
+
+// Games API
+
+export function generateGame(data) {
+  return request('/games/generate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function remixGame(data) {
+  return request('/games/remix', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getGameLibrary(userId) {
+  return request(`/games/library?user_id=${userId}`)
+}
+
+export function getExploreGames() {
+  return request('/games/explore')
+}
+
+export function playGame(data) {
+  return request('/games/play', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getGame(gameId) {
+  return request(`/games/get/${gameId}`)
+}
+
+export function deleteGame(data) {
+  return request('/games/delete', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
