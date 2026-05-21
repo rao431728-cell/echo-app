@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
-import { getProfile } from '../../lib/api'
+import { getProfile, logSteps } from '../../lib/api'
 import Navbar from '../../components/Navbar'
 import BottomNav from '../../components/BottomNav'
-import { Flame, MessageCircle, Apple, TrendingUp, Calendar, Dumbbell, Loader2 } from 'lucide-react'
+import { Flame, MessageCircle, Apple, TrendingUp, Calendar, Dumbbell, Loader2, Footprints } from 'lucide-react'
 
 export default function FitnessHome() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [stepsInput, setStepsInput] = useState('')
+  const [savingSteps, setSavingSteps] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -29,6 +31,20 @@ export default function FitnessHome() {
       })
   }, [user, navigate])
 
+  const handleLogSteps = async () => {
+    if (!stepsInput || !user) return
+    setSavingSteps(true)
+    try {
+      await logSteps({ user_id: user.id, steps: parseInt(stepsInput) })
+      const data = await getProfile(user.id)
+      setProfile(data)
+      setStepsInput('')
+    } catch (e) {
+      console.error('Failed to log steps:', e)
+    }
+    setSavingSteps(false)
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-dark-bg flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
@@ -40,6 +56,10 @@ export default function FitnessHome() {
   const streak = p?.streak || 0
   const workoutsThisWeek = profile?.workouts_this_week || 0
   const daysPerWeek = p?.days_per_week || 4
+
+  const todaySteps = profile?.today_steps
+  const currentSteps = todaySteps?.steps || 0
+  const stepsGoal = todaySteps?.goal || 10000
 
   return (
     <div className="min-h-screen bg-dark-bg pb-20 md:pb-8">
@@ -78,6 +98,59 @@ export default function FitnessHome() {
             </div>
           </motion.div>
         </div>
+
+        {/* Steps Counter */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+          className="bg-dark-card border border-dark-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Footprints className="text-brand-green" size={20} />
+              <span className="text-sm font-medium">Steps Today</span>
+            </div>
+            <span className="text-xs text-muted">{stepsGoal.toLocaleString()} goal</span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            {/* Circular Progress Ring */}
+            <div className="relative w-24 h-24 flex-shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" strokeWidth="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#22c55e" strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - Math.min(currentSteps / stepsGoal, 1))}`}
+                  className="transition-all duration-700"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-bold">{currentSteps.toLocaleString()}</span>
+                <span className="text-[10px] text-muted">steps</span>
+              </div>
+            </div>
+
+            {/* Quick Add */}
+            <div className="flex-1 space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={stepsInput}
+                  onChange={e => setStepsInput(e.target.value)}
+                  placeholder="Add steps"
+                  className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-green"
+                  onKeyDown={e => e.key === 'Enter' && handleLogSteps()}
+                />
+              </div>
+              <button onClick={handleLogSteps} disabled={savingSteps || !stepsInput}
+                className="w-full py-2 bg-brand-green/20 hover:bg-brand-green/30 text-brand-green text-sm font-medium rounded-lg transition-colors disabled:opacity-40">
+                {savingSteps ? 'Saving...' : 'Log Steps'}
+              </button>
+              <div className="flex justify-between text-[10px] text-muted">
+                <span>{Math.round((currentSteps / stepsGoal) * 100)}% of goal</span>
+                <span>{Math.max(stepsGoal - currentSteps, 0).toLocaleString()} to go</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Today's Workout */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}

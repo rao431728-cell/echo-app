@@ -59,6 +59,20 @@ export function logWeight(data) {
   })
 }
 
+export function logSteps(data) {
+  return request('/fitness/log-steps', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function setStepGoal(data) {
+  return request('/fitness/set-step-goal', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
 export function saveMeals(data) {
   return request('/fitness/save-meals', {
     method: 'POST',
