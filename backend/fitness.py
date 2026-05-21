@@ -155,6 +155,9 @@ def get_profile():
     meals_res = get_sb().table('fitness_meals').select('*').eq('user_id', user_id).eq('date', today_str).execute()
     today_meals = meals_res.data[0] if meals_res.data else None
 
+    steps_res = get_sb().table('fitness_steps').select('*').eq('user_id', user_id).eq('date', today_str).execute()
+    today_steps = steps_res.data[0] if steps_res.data else None
+
     return jsonify(
         profile=profile,
         today_workout=today_workout,
@@ -165,6 +168,7 @@ def get_profile():
         max_streak=max_streak,
         all_workouts=all_workouts,
         today_meals=today_meals,
+        today_steps=today_steps,
     )
 
 
