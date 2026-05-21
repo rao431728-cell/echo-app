@@ -6,9 +6,9 @@ import Navbar from '../../components/Navbar'
 import { generateGame, remixGame, playGame } from '../../lib/api'
 import { Gamepad2, Sparkles, Send, X, Download, Maximize2, Minimize2, RotateCcw, MessageSquare, Loader2, Library, Compass } from 'lucide-react'
 
-const GENRES = ['Arcade', 'Platformer', 'Puzzle', 'Racing', 'RPG', 'Strategy', 'Endless Runner', 'Other']
-const STYLES = ['Retro Pixel', 'Modern Neon', 'Minimal', 'Sci-Fi', 'Fantasy', 'Cute']
-const FEATURES = ['Boss Fights', 'Power-ups', 'Leaderboard', 'Story Mode', 'Procedural Levels', 'Physics', 'Time Attack']
+const GENRES = ['FPS', 'Arcade', 'Platformer', 'Puzzle', 'Racing', 'RPG', 'Strategy', 'Endless Runner', 'Fighting', 'Tower Defense']
+const STYLES = ['Retro Pixel', 'Modern Neon', 'Minimal', 'Sci-Fi', 'Fantasy', 'Cyberpunk', 'Horror']
+const FEATURES = ['Boss Fights', 'Power-ups', 'Multiple Weapons', 'Procedural Levels', 'Combo System', 'Physics', 'Multiplayer (Local)', 'Story Mode']
 
 const GEN_MESSAGES = [
   'Designing your game world...',
@@ -279,12 +279,12 @@ export default function GameHome() {
               {/* Example prompts */}
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.25 }} className="flex flex-wrap justify-center gap-2 mt-8 max-w-2xl">
                 {[
-                  { label: 'Space Shooter', prompt: 'A space shooter with 3 types of aliens, boss fights every 5 levels, and shield power-ups' },
-                  { label: 'Platformer', prompt: 'A platformer where I play as a ninja running between buildings collecting coins while avoiding spikes' },
-                  { label: 'Neon Tetris', prompt: 'Tetris but the blocks are neon colored and speed up every 10 lines' },
-                  { label: 'Zombie Survival', prompt: 'A top-down zombie survival game where I shoot zombies with different weapons' },
-                  { label: 'Snake+', prompt: 'A snake game with power-ups and obstacles that increase every level' },
-                  { label: 'Breakout', prompt: 'A breakout/arkanoid clone with power-ups, multiple ball types, and boss bricks' },
+                  { label: 'FPS Shooter', prompt: 'A first-person shooter with raycasting 3D graphics, multiple weapons (pistol, shotgun, rifle), different enemy types that chase and shoot back, procedural maze levels, health pickups and ammo crates' },
+                  { label: 'Space Shooter', prompt: 'A space shooter with 3 types of aliens, boss fights every 5 levels, combo multiplier, and shield power-ups' },
+                  { label: 'Platformer', prompt: 'A platformer where I play as a ninja wall-jumping between buildings collecting coins with double-jump, dash, and slow-motion abilities' },
+                  { label: 'Zombie Survival', prompt: 'A top-down zombie survival game with multiple weapons, barricade building, wave system, and boss zombies every 5 waves' },
+                  { label: 'Racing', prompt: 'A pseudo-3D racing game with multiple tracks, nitro boost, AI opponents, and drift mechanics' },
+                  { label: 'Dungeon Crawler', prompt: 'A first-person dungeon crawler RPG with procedural rooms, loot drops, inventory system, and turn-based combat' },
                 ].map(ex => (
                   <motion.button key={ex.label} onClick={() => { setPrompt(ex.prompt); textareaRef.current?.focus() }}
                     whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }}

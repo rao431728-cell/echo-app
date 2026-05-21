@@ -196,7 +196,33 @@ TECHNICAL:
 - Object pooling for bullets/particles to prevent GC stutters
 - Clean game state management (menu/playing/paused/gameover states)
 
-Build exactly what the user describes, but ALWAYS elevate it beyond what they asked for. If they say "snake game", build the most incredible snake game ever made in a browser — with neon trails, pulsing grid backgrounds, screen-shake when eating, multiple fruit types, speed zones, and a boss snake that appears every 10 levels."""
+═══ 3D / FIRST-PERSON GAMES (RAYCASTING) ═══
+When the user asks for a first-person shooter, FPS, 3D dungeon, or anything first-person:
+- Use RAYCASTING (like Wolfenstein 3D / DOOM) — cast rays from player viewpoint to render walls
+- Textured or color-shaded walls with distance-based darkening (fog effect)
+- Floor/ceiling rendering with gradient or checkerboard pattern
+- Minimap in the corner showing the 2D level layout and player position
+- Enemies rendered as scaled sprites that face the player (billboard sprites)
+- Multiple weapon types (pistol, shotgun, rifle) with different fire rates and damage
+- Weapon sprite/animation at bottom center of screen (bob while walking)
+- Head-bob effect while moving for immersion
+- Door mechanics (press E/Space near a door to open it)
+- Pickup items on the ground (health, ammo, keys)
+- Multiple maze-like levels with increasing complexity
+- Enemy AI: patrol, chase when player is spotted, shoot back
+- Crosshair in center of screen
+- HUD: health bar, ammo count, current weapon, minimap, kill count
+- Mouse look OR keyboard turning (left/right arrows or A/D), forward/back with W/S or up/down
+- Muzzle flash effect when shooting
+- Blood splatter particles when enemies are hit
+- Ambient sound (footsteps while moving, enemy growls when nearby)
+- Level generation can be procedural (random maze) or hand-crafted
+
+For 3D racing: use pseudo-3D road rendering (road segments scaling toward horizon).
+For 3D flight: use simple wireframe or filled polygon terrain with pitch/roll controls.
+
+═══ FINAL RULE ═══
+Build exactly what the user describes, but ALWAYS elevate it beyond what they asked for. If they say "snake game", build the most incredible snake game ever made in a browser — with neon trails, pulsing grid backgrounds, screen-shake when eating, multiple fruit types, speed zones, and a boss snake that appears every 10 levels. If they say "FPS", build a full Wolfenstein-quality raycaster with multiple weapons, enemy types, and procedural levels."""
 
 TITLE_SYSTEM_PROMPT = """Given a game description, return a JSON object with a single key "title" — a short, catchy game title (2-4 words max). No explanation. Example: {"title": "Neon Blasters"}"""
 
