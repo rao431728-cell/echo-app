@@ -1,13 +1,16 @@
 import os
 import json
 import re
+import time
 from flask import Blueprint, request, jsonify
 import anthropic
 from supabase import create_client
 
 games_bp = Blueprint('games', __name__)
 
-MODEL = 'claude-opus-4-6'
+MODEL_PRIMARY = 'claude-sonnet-4-6'
+MODEL_FALLBACK = 'claude-haiku-4-5-20251001'
+MODEL_TITLE = 'claude-haiku-4-5-20251001'
 
 _sb = None
 _claude = None
@@ -81,6 +84,54 @@ def _strip_fences(text):
     return text.strip()
 
 
+def _call_claude_with_retry(model, system, messages, max_tokens, max_retries=2):
+    models_to_try = [model]
+    if model == MODEL_PRIMARY:
+        models_to_try.append(MODEL_FALLBACK)
+
+    last_error = None
+    for current_model in models_to_try:
+        for attempt in range(max_retries):
+            try:
+                msg = get_claude().messages.create(
+                    model=current_model,
+                    max_tokens=max_tokens,
+                    system=system,
+                    messages=messages,
+                )
+                text = ''
+                for block in msg.content:
+                    if block.type == 'text':
+                        text += block.text
+                return text, current_model
+            except anthropic.RateLimitError:
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                last_error = 'Rate limited. Please wait a moment and try again.'
+            except anthropic.AuthenticationError:
+                last_error = 'API key is invalid or expired. Please check your Anthropic API key.'
+                break
+            except anthropic.BadRequestError as e:
+                last_error = f'Bad request: {str(e)}'
+                break
+            except anthropic.APIError as e:
+                if 'credit' in str(e).lower() or 'billing' in str(e).lower() or 'insufficient' in str(e).lower():
+                    last_error = 'API credits depleted. Please top up your Anthropic account.'
+                    break
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                last_error = f'API error: {str(e)}'
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                last_error = str(e)
+
+    raise RuntimeError(last_error or 'All models failed')
+
+
 GAME_SYSTEM_PROMPT = """You are the world's best HTML5 game developer. You create complete, fully playable games using pure HTML, CSS, and JavaScript in a single file. Your games are polished, fun, and work perfectly in a browser iframe.
 
 RULES YOU ALWAYS FOLLOW:
@@ -145,33 +196,30 @@ def generate_game():
         full_prompt += f'\nMust include: {", ".join(features)}'
 
     try:
-        msg = get_claude().messages.create(
-            model=MODEL,
+        raw_html, model_used = _call_claude_with_retry(
+            MODEL_PRIMARY,
+            GAME_SYSTEM_PROMPT,
+            [{'role': 'user', 'content': full_prompt}],
             max_tokens=16000,
-            system=GAME_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': full_prompt}],
         )
-        html = ''
-        for block in msg.content:
-            if block.type == 'text':
-                html += block.text
-        html = _strip_fences(html)
+        html = _strip_fences(raw_html)
 
         if not html or '<' not in html:
             return jsonify(error='Failed to generate game. Please try again.'), 500
 
-        title_msg = get_claude().messages.create(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=100,
-            system=TITLE_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': prompt}],
-        )
-        title_text = ''
-        for block in title_msg.content:
-            if block.type == 'text':
-                title_text += block.text
-        title_data = _extract_json(title_text)
-        title = (title_data or {}).get('title', 'Untitled Game')
+        title = 'Untitled Game'
+        try:
+            title_text, _ = _call_claude_with_retry(
+                MODEL_TITLE,
+                TITLE_SYSTEM_PROMPT,
+                [{'role': 'user', 'content': prompt}],
+                max_tokens=100,
+                max_retries=1,
+            )
+            title_data = _extract_json(title_text)
+            title = (title_data or {}).get('title', 'Untitled Game')
+        except Exception:
+            pass
 
         game_id = None
         try:
@@ -189,8 +237,15 @@ def generate_game():
 
         return jsonify(html=html, title=title, game_id=game_id)
 
-    except Exception as e:
+    except RuntimeError as e:
         return jsonify(error=str(e)), 500
+    except Exception as e:
+        msg = str(e)
+        if 'credit' in msg.lower() or 'billing' in msg.lower():
+            return jsonify(error='API credits depleted. Please top up your Anthropic account.'), 402
+        if 'auth' in msg.lower() or 'key' in msg.lower():
+            return jsonify(error='API key issue. Please check your Anthropic API key.'), 401
+        return jsonify(error='Something went wrong generating your game. Please try again.'), 500
 
 
 @games_bp.route('/games/remix', methods=['POST'])
@@ -210,17 +265,13 @@ def remix_game():
 
     try:
         user_prompt = f"INSTRUCTION:\n{instruction}\n\nCURRENT GAME HTML:\n{current_html}"
-        msg = get_claude().messages.create(
-            model=MODEL,
+        raw_html, _ = _call_claude_with_retry(
+            MODEL_PRIMARY,
+            REMIX_SYSTEM_PROMPT,
+            [{'role': 'user', 'content': user_prompt}],
             max_tokens=16000,
-            system=REMIX_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': user_prompt}],
         )
-        html = ''
-        for block in msg.content:
-            if block.type == 'text':
-                html += block.text
-        html = _strip_fences(html)
+        html = _strip_fences(raw_html)
 
         if not html or '<' not in html:
             return jsonify(error='Remix failed. Try again.'), 500
@@ -235,8 +286,13 @@ def remix_game():
 
         return jsonify(html=html, message='Game remixed successfully.')
 
-    except Exception as e:
+    except RuntimeError as e:
         return jsonify(error=str(e)), 500
+    except Exception as e:
+        msg = str(e)
+        if 'credit' in msg.lower() or 'billing' in msg.lower():
+            return jsonify(error='API credits depleted. Please top up your Anthropic account.'), 402
+        return jsonify(error='Something went wrong. Please try again.'), 500
 
 
 @games_bp.route('/games/library', methods=['GET'])

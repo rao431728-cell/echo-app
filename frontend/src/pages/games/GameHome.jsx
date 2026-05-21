@@ -123,7 +123,8 @@ export default function GameHome() {
         playGame({ game_id: data.game_id }).catch(() => {})
       }
     } catch (e) {
-      setGameHtml('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#999;background:#0a0a0a"><p>Generation failed. Please try again.</p></body></html>')
+      const errMsg = e.message || 'Generation failed. Please try again.'
+      setGameHtml(`<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#999;background:#0a0a0a;text-align:center;padding:2rem"><div><p style="font-size:18px;margin-bottom:12px;color:#f87171">Generation Failed</p><p style="font-size:14px;max-width:400px;line-height:1.6">${errMsg.replace(/</g, '&lt;')}</p></div></body></html>`)
       setGameTitle('Error')
     }
     setGenerating(false)
