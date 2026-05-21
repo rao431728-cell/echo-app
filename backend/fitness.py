@@ -470,6 +470,81 @@ def log_weight_route():
     return jsonify(ok=True)
 
 
+@fitness_bp.route('/fitness/log-steps', methods=['POST'])
+def log_steps():
+    data = request.json
+    if not data:
+        return jsonify(error='JSON body required'), 400
+    user_id = data.get('user_id')
+    steps = data.get('steps')
+    if not user_id or steps is None:
+        return jsonify(error='user_id and steps required'), 400
+    try:
+        steps = int(steps)
+    except (TypeError, ValueError):
+        return jsonify(error='steps must be an integer'), 400
+    if steps < 0:
+        return jsonify(error='steps must be non-negative'), 400
+
+    today_str = str(date.today())
+    row = {
+        'user_id': user_id,
+        'date': today_str,
+        'steps': steps,
+        'goal': 10000,
+    }
+
+    # Check if a record already exists to preserve custom goal
+    existing = get_sb().table('fitness_steps').select('*').eq('user_id', user_id).eq('date', today_str).execute()
+    if existing.data:
+        row['goal'] = existing.data[0].get('goal', 10000)
+
+    try:
+        res = get_sb().table('fitness_steps').upsert(row, on_conflict='user_id,date').execute()
+    except Exception as e:
+        return jsonify(error=f'Database error: {e}'), 500
+
+    saved = res.data[0] if res.data else row
+    return jsonify(ok=True, steps=saved)
+
+
+@fitness_bp.route('/fitness/set-step-goal', methods=['POST'])
+def set_step_goal():
+    data = request.json
+    if not data:
+        return jsonify(error='JSON body required'), 400
+    user_id = data.get('user_id')
+    goal = data.get('goal')
+    if not user_id or goal is None:
+        return jsonify(error='user_id and goal required'), 400
+    try:
+        goal = int(goal)
+    except (TypeError, ValueError):
+        return jsonify(error='goal must be an integer'), 400
+    if goal <= 0:
+        return jsonify(error='goal must be a positive integer'), 400
+
+    today_str = str(date.today())
+    row = {
+        'user_id': user_id,
+        'date': today_str,
+        'steps': 0,
+        'goal': goal,
+    }
+
+    # Preserve existing steps count if record exists
+    existing = get_sb().table('fitness_steps').select('*').eq('user_id', user_id).eq('date', today_str).execute()
+    if existing.data:
+        row['steps'] = existing.data[0].get('steps', 0)
+
+    try:
+        get_sb().table('fitness_steps').upsert(row, on_conflict='user_id,date').execute()
+    except Exception as e:
+        return jsonify(error=f'Database error: {e}'), 500
+
+    return jsonify(ok=True)
+
+
 @fitness_bp.route('/fitness/explain-exercise', methods=['POST'])
 def explain_exercise():
     data = request.json
