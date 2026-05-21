@@ -83,6 +83,91 @@ def _profile(user_id):
     return res.data[0] if res.data else None
 
 
+def _calculate_bmi(weight, weight_unit, height, height_unit):
+    """Calculate BMI from weight and height, converting to metric as needed.
+    Returns (bmi_value, bmi_category) or (None, None) if inputs are invalid.
+    """
+    if not weight or not height:
+        return None, None
+    try:
+        weight = float(weight)
+        height = float(height)
+    except (TypeError, ValueError):
+        return None, None
+    if weight <= 0 or height <= 0:
+        return None, None
+
+    # Convert weight to kg
+    weight_kg = weight
+    if weight_unit == 'lbs':
+        weight_kg = weight * 0.453592
+
+    # Convert height to cm, then to meters
+    height_cm = height
+    if height_unit == 'ft':
+        height_cm = height * 30.48
+    elif height_unit == 'in':
+        height_cm = height * 2.54
+    height_m = height_cm / 100.0
+
+    if height_m <= 0:
+        return None, None
+
+    bmi = weight_kg / (height_m ** 2)
+    bmi = round(bmi, 1)
+
+    if bmi < 18.5:
+        category = 'Underweight'
+    elif bmi < 25:
+        category = 'Normal'
+    elif bmi < 30:
+        category = 'Overweight'
+    else:
+        category = 'Obese'
+
+    return bmi, category
+
+
+def _calculate_weight_streak(all_weight_entries):
+    """Calculate consecutive days of weight logging ending today or yesterday.
+    all_weight_entries: list of dicts with 'date' field (YYYY-MM-DD strings).
+    Returns int streak count.
+    """
+    if not all_weight_entries:
+        return 0
+
+    # Get unique dates sorted descending
+    unique_dates = sorted(set(
+        entry['date'] for entry in all_weight_entries if entry.get('date')
+    ), reverse=True)
+
+    if not unique_dates:
+        return 0
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    # Determine starting point: today or yesterday
+    from datetime import datetime
+    first_date = datetime.strptime(unique_dates[0], '%Y-%m-%d').date()
+
+    if first_date == today:
+        current = today
+    elif first_date == yesterday:
+        current = yesterday
+    else:
+        # Most recent log is older than yesterday, streak is 0
+        return 0
+
+    streak = 0
+    date_set = set(unique_dates)
+    while str(current) in date_set:
+        streak += 1
+        current -= timedelta(days=1)
+
+    return streak
+
+
 def _today_workout(profile):
     if not profile or not profile.get('program'):
         return None
@@ -132,8 +217,33 @@ def get_profile():
         if w.get('completed') and w.get('date', '') >= str(week_start)
     )
 
-    wl_res = get_sb().table('fitness_weight_log').select('*').eq('user_id', user_id).order('date').execute()
-    weight_log = wl_res.data or []
+    # Fetch ALL weight log entries (for streak calculation)
+    wl_all_res = get_sb().table('fitness_weight_log').select('*').eq('user_id', user_id).order('date').execute()
+    all_weight_entries = wl_all_res.data or []
+
+    # Filter weight log to last 30 days for the response
+    thirty_days_ago = str(date.today() - timedelta(days=30))
+    weight_log = [e for e in all_weight_entries if e.get('date', '') >= thirty_days_ago]
+
+    # All weight dates (for frontend streak visualization if needed)
+    all_weight_dates = sorted(set(e['date'] for e in all_weight_entries if e.get('date')))
+
+    # Calculate weight-logging streak
+    weight_streak = _calculate_weight_streak(all_weight_entries)
+
+    # Determine latest weight
+    latest_weight = None
+    if all_weight_entries:
+        latest_weight = all_weight_entries[-1].get('weight')
+
+    # Calculate BMI using latest weight (or profile weight as fallback)
+    bmi_weight = latest_weight if latest_weight is not None else profile.get('weight')
+    bmi_value, bmi_category = _calculate_bmi(
+        bmi_weight,
+        profile.get('weight_unit', 'kg'),
+        profile.get('height'),
+        profile.get('height_unit', 'cm'),
+    )
 
     weekly_workouts = []
     if workouts:
@@ -163,12 +273,17 @@ def get_profile():
         today_workout=today_workout,
         workouts_this_week=workouts_this_week,
         weight_log=weight_log,
+        weight_log_all=all_weight_dates,
         weekly_workouts=weekly_workouts,
         total_workouts=total_workouts,
         max_streak=max_streak,
         all_workouts=all_workouts,
         today_meals=today_meals,
         today_steps=today_steps,
+        weight_streak=weight_streak,
+        bmi=bmi_value,
+        bmi_category=bmi_category,
+        latest_weight=latest_weight,
     )
 
 
