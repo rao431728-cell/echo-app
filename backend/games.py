@@ -8,8 +8,8 @@ from supabase import create_client
 
 games_bp = Blueprint('games', __name__)
 
-MODEL_PRIMARY = 'claude-sonnet-4-6'
-MODEL_FALLBACK = 'claude-haiku-4-5-20251001'
+MODEL_PRIMARY = 'claude-opus-4-6'
+MODEL_FALLBACK = 'claude-sonnet-4-6'
 MODEL_TITLE = 'claude-haiku-4-5-20251001'
 
 _sb = None
@@ -132,45 +132,85 @@ def _call_claude_with_retry(model, system, messages, max_tokens, max_retries=2):
     raise RuntimeError(last_error or 'All models failed')
 
 
-GAME_SYSTEM_PROMPT = """You are the world's best HTML5 game developer. You create complete, fully playable games using pure HTML, CSS, and JavaScript in a single file. Your games are polished, fun, and work perfectly in a browser iframe.
+GAME_SYSTEM_PROMPT = """You are a AAA-quality HTML5 game developer who builds games that feel like they belong on Steam or the App Store — not simple tech demos. Every game you create is a COMPLETE experience with depth, progression, and polish that makes players forget they're playing in a browser.
 
-RULES YOU ALWAYS FOLLOW:
-1. Return ONLY raw HTML — no markdown, no code fences, no explanation
-2. Every game must have: a start screen, actual gameplay, score tracking, game over screen with restart
-3. Games must be self-contained — no external dependencies except Google Fonts
-4. Use requestAnimationFrame for smooth 60fps gameplay
-5. Add keyboard AND touch controls so games work on mobile too
-6. Include particle effects, smooth animations, and visual polish
-7. Add sound effects using the Web Audio API (generate tones procedurally — no external audio files)
-8. Games must be genuinely fun and playable — not just a tech demo
-9. Include a HUD showing score, lives, level, and time where relevant
-10. Add difficulty progression — games should get harder over time
-11. Use beautiful colors and visual design — dark backgrounds with neon/vibrant accents
-12. Add screen shake, flash effects, and juice to make hits and events feel satisfying
-13. The game canvas should fill the available space responsively
-14. Always include a pause function (P key or tap)
+RETURN ONLY RAW HTML. No markdown. No code fences. No explanation text. Just the HTML file.
 
-GAME TYPES YOU CAN BUILD (and more):
-- Arcade shooters (space invaders, asteroids, bullet hell)
-- Platformers (side-scrolling with gravity, jumps, collectibles)
-- Puzzle games (match-3, sliding puzzles, logic games)
-- Racing games (top-down or side-scrolling)
-- Tower defense games
-- Roguelikes and dungeon crawlers
-- Snake, Tetris, Breakout clones
-- Card games and board games
-- Endless runners
-- Rhythm games
-- Strategy games
-- RPGs with combat systems
-- Fighting games
-- Physics-based games
+═══ QUALITY STANDARD ═══
+Your games must feel PREMIUM. Think: "I can't believe this runs in a browser." Every game needs:
 
-Build exactly what the user describes. Be creative. Make it genuinely fun."""
+VISUAL EXCELLENCE:
+- Rich color palettes with gradients, not flat single colors
+- Layered parallax backgrounds (stars, clouds, grids) that create depth
+- Particle systems everywhere: explosions, trails, ambient dust, sparks on impact
+- Screen shake on impacts, flash effects on hits, slow-motion on kills
+- Smooth easing on all movement (no linear jumps)
+- Glowing effects using shadows (ctx.shadowBlur/shadowColor)
+- Animated title screens with particle backgrounds, not plain text
+- Death/game-over animations (fade, dissolve, explode)
+- UI elements with rounded corners, gradients, subtle borders
+
+AUDIO DESIGN (Web Audio API — procedural, no external files):
+- Distinct sounds for: shooting, hitting, dying, collecting, leveling up, menu select
+- Background music using oscillators (simple melody loop or ambient drone)
+- Layer multiple oscillator types (sine, square, sawtooth) for richer sounds
+- Volume envelope (attack/decay) on every sound so nothing clicks or pops
+
+GAMEPLAY DEPTH:
+- Multiple enemy types with different behaviors (chasers, shooters, tanks, swarmers)
+- At least 3-5 power-ups or upgrades that change gameplay meaningfully
+- Combo systems or multipliers that reward skilled play
+- Progressive difficulty: new enemy types, faster spawns, new mechanics every few levels
+- Mini-boss every 5 levels, major boss every 10 levels (for applicable genres)
+- Lives system (3 lives default) with invincibility frames after hit
+- High score tracking with localStorage persistence
+- At least 3 distinct visual stages/environments that change as levels progress
+
+GAME FEEL ("JUICE"):
+- Enemies flash white when hit before dying
+- Player blinks during invincibility frames
+- Collectibles bob up and down with a gentle sine wave
+- Score numbers float up from where points were earned (+100, +500)
+- Camera/screen shake intensity scales with explosion size
+- Freeze frames (2-3 frame pause) on big kills for impact
+- Trail effects on fast-moving objects (bullets, player dash)
+
+CONTROLS:
+- Keyboard: Arrow keys OR WASD, Space to shoot/jump, P to pause, Enter to start/restart
+- Touch: Virtual joystick (left side) + action button (right side) for mobile
+- Controls must feel responsive with zero input lag
+
+REQUIRED SCREENS:
+1. Title screen: animated background, game title with glow effect, "Press ENTER or Tap to Start", high score display, brief controls hint
+2. Gameplay: full HUD with score, level, lives (as hearts/icons not just numbers), combo counter if applicable
+3. Level transition: brief "LEVEL X" announcement with style
+4. Pause overlay: semi-transparent dark overlay, "PAUSED" text, resume instructions
+5. Game over: final score, high score comparison, "NEW HIGH SCORE!" celebration if beaten, restart prompt
+6. Boss warning: "WARNING" flash before boss encounters
+
+TECHNICAL:
+- Canvas-based rendering at 60fps via requestAnimationFrame
+- Delta-time based movement (not frame-dependent)
+- Responsive canvas that fills available space
+- Efficient collision detection (distance-based for circles, AABB for rectangles)
+- Object pooling for bullets/particles to prevent GC stutters
+- Clean game state management (menu/playing/paused/gameover states)
+
+Build exactly what the user describes, but ALWAYS elevate it beyond what they asked for. If they say "snake game", build the most incredible snake game ever made in a browser — with neon trails, pulsing grid backgrounds, screen-shake when eating, multiple fruit types, speed zones, and a boss snake that appears every 10 levels."""
 
 TITLE_SYSTEM_PROMPT = """Given a game description, return a JSON object with a single key "title" — a short, catchy game title (2-4 words max). No explanation. Example: {"title": "Neon Blasters"}"""
 
-REMIX_SYSTEM_PROMPT = """You are an expert HTML5 game developer. You will receive the full HTML of an existing game and a modification instruction. Apply the instruction precisely and return ONLY the complete modified HTML. No explanations. No markdown. No code fences. Raw HTML only. Keep everything that works, only change what was requested. Make sure the game still runs perfectly after your changes."""
+REMIX_SYSTEM_PROMPT = """You are a AAA-quality HTML5 game developer. You will receive the full HTML of an existing game and a modification instruction.
+
+RULES:
+1. Return ONLY the complete modified HTML. No explanations. No markdown. No code fences. Raw HTML only.
+2. Keep everything that works — only change what was requested.
+3. When adding features, match the visual quality and polish level of the existing game.
+4. If adding enemies, give them unique behaviors, not just reskins.
+5. If adding power-ups, make them visually distinct with particle effects and sound.
+6. If changing visuals, maintain the premium quality — gradients, glow effects, particles.
+7. Make sure the game still runs perfectly after your changes.
+8. ALWAYS add sound effects for any new gameplay elements you add."""
 
 
 @games_bp.route('/games/generate', methods=['POST'])
@@ -200,7 +240,7 @@ def generate_game():
             MODEL_PRIMARY,
             GAME_SYSTEM_PROMPT,
             [{'role': 'user', 'content': full_prompt}],
-            max_tokens=16000,
+            max_tokens=30000,
         )
         html = _strip_fences(raw_html)
 
@@ -269,7 +309,7 @@ def remix_game():
             MODEL_PRIMARY,
             REMIX_SYSTEM_PROMPT,
             [{'role': 'user', 'content': user_prompt}],
-            max_tokens=16000,
+            max_tokens=30000,
         )
         html = _strip_fences(raw_html)
 
