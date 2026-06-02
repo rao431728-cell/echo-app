@@ -26,8 +26,9 @@ export default function FitnessHome() {
         }
         setLoading(false)
       })
-      .catch(() => {
-        navigate('/dashboard/fitness/onboarding')
+      .catch((err) => {
+        console.error('Profile fetch failed:', err)
+        setLoading(false)
       })
   }, [user, navigate])
 

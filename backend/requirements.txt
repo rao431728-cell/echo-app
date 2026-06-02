@@ -5,3 +5,4 @@ supabase
 python-dotenv
 gunicorn
 PyPDF2
+stripe

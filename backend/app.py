@@ -7,6 +7,7 @@ from flask_cors import CORS
 from fitness import fitness_bp
 from study import study_bp
 from games import games_bp
+from stripe_bp import stripe_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -14,6 +15,7 @@ CORS(app)
 app.register_blueprint(fitness_bp)
 app.register_blueprint(study_bp)
 app.register_blueprint(games_bp)
+app.register_blueprint(stripe_bp)
 
 @app.route('/api/health')
 def health():

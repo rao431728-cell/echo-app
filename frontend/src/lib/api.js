@@ -1,5 +1,16 @@
 const API = import.meta.env.VITE_API_URL || ''
 
+export class UsageLimitError extends Error {
+  constructor(data) {
+    super('Usage limit reached')
+    this.name = 'UsageLimitError'
+    this.plan = data.plan
+    this.usage = data.usage
+    this.limits = data.limits
+    this.upgradeUrl = data.upgrade_url
+  }
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
@@ -7,9 +18,28 @@ async function request(path, options = {}) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
+    if (res.status === 429 && err.plan) {
+      throw new UsageLimitError(err)
+    }
     throw new Error(err.error || 'Request failed')
   }
   return res.json()
+}
+
+export function getSubscription(userId) {
+  return request(`/api/stripe/subscription?user_id=${userId}`)
+}
+
+export function createCheckoutSession(data) {
+  return request('/api/stripe/create-checkout-session', {
+    method: 'POST', body: JSON.stringify(data),
+  })
+}
+
+export function createPortalSession(data) {
+  return request('/api/stripe/create-portal-session', {
+    method: 'POST', body: JSON.stringify(data),
+  })
 }
 
 export function getProfile(userId) {

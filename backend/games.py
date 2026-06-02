@@ -6,6 +6,8 @@ from flask import Blueprint, request, jsonify
 import anthropic
 from supabase import create_client
 
+from middleware import require_plan
+
 games_bp = Blueprint('games', __name__)
 
 MODEL_PRIMARY = 'claude-opus-4-6'
@@ -240,6 +242,7 @@ RULES:
 
 
 @games_bp.route('/games/generate', methods=['POST'])
+@require_plan('game')
 def generate_game():
     data = request.json or {}
     user_id = data.get('user_id')
@@ -315,6 +318,7 @@ def generate_game():
 
 
 @games_bp.route('/games/remix', methods=['POST'])
+@require_plan('game')
 def remix_game():
     data = request.json or {}
     user_id = data.get('user_id')

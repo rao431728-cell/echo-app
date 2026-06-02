@@ -9,6 +9,8 @@ import anthropic
 from supabase import create_client
 from PyPDF2 import PdfReader
 
+from middleware import require_plan
+
 study_bp = Blueprint('study', __name__)
 
 MODEL = 'claude-sonnet-4-6'
@@ -186,6 +188,7 @@ def _extract_pdf_text(b64_data):
 
 
 @study_bp.route('/study/chat', methods=['POST'])
+@require_plan('message')
 def chat():
     data = request.json
     user_id = data.get('user_id')
@@ -313,6 +316,7 @@ Return ONLY valid JSON:
 
 
 @study_bp.route('/study/generate-flashcards', methods=['POST'])
+@require_plan('message')
 def generate_flashcards():
     data = request.json
     user_id = data.get('user_id')
@@ -409,6 +413,7 @@ def review_flashcard():
 
 
 @study_bp.route('/study/generate-mcqs', methods=['POST'])
+@require_plan('message')
 def generate_mcqs():
     data = request.json
     user_id = data.get('user_id')
@@ -461,6 +466,7 @@ Make questions exam-style. Cover different aspects of the topic. Ensure only one
 
 
 @study_bp.route('/study/generate-revision-plan', methods=['POST'])
+@require_plan('message')
 def generate_revision_plan():
     data = request.json
     user_id = data.get('user_id')
@@ -523,6 +529,7 @@ Distribute subjects evenly. Build difficulty over weeks. Include breaks and vari
 
 
 @study_bp.route('/study/explain', methods=['POST'])
+@require_plan('message')
 def explain_concept():
     data = request.json
     user_id = data.get('user_id')

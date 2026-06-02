@@ -21,6 +21,7 @@ import RevisionPlan from './pages/study/RevisionPlan'
 import UploadNotes from './pages/study/UploadNotes'
 import StudyProgress from './pages/study/Progress'
 import Websites from './pages/Websites'
+import Pricing from './pages/Pricing'
 import GameHome from './pages/games/GameHome'
 import GameLibrary from './pages/games/GameLibrary'
 import GameExplore from './pages/games/GameExplore'
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/pricing" element={<Pricing />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/dashboard/fitness" element={<ProtectedRoute><FitnessHome /></ProtectedRoute>} />
         <Route path="/dashboard/fitness/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

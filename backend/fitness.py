@@ -6,9 +6,11 @@ from flask import Blueprint, request, jsonify, Response, stream_with_context
 import anthropic
 from supabase import create_client
 
+from middleware import require_plan
+
 fitness_bp = Blueprint('fitness', __name__)
 
-MODEL = 'claude-opus-4-6'
+MODEL = 'claude-sonnet-4-6'
 
 _sb = None
 _claude = None
@@ -202,92 +204,98 @@ def get_profile():
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify(error='user_id required'), 400
-    profile = _profile(user_id)
+    try:
+        profile = _profile(user_id)
+    except Exception as e:
+        print(f"Profile fetch error: {e}", flush=True)
+        return jsonify(error='Database connection error', profile=None), 503
     if not profile:
         return jsonify(profile=None)
 
-    today_workout = _today_workout(profile)
+    try:
+        today_workout = _today_workout(profile)
 
-    wk_res = get_sb().table('fitness_workouts').select('*').eq('user_id', user_id).execute()
-    workouts = wk_res.data or []
-    today_str = str(date.today())
-    week_start = date.today() - timedelta(days=date.today().weekday())
-    workouts_this_week = sum(
-        1 for w in workouts
-        if w.get('completed') and w.get('date', '') >= str(week_start)
-    )
+        wk_res = get_sb().table('fitness_workouts').select('*').eq('user_id', user_id).execute()
+        workouts = wk_res.data or []
+        today_str = str(date.today())
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        workouts_this_week = sum(
+            1 for w in workouts
+            if w.get('completed') and w.get('date', '') >= str(week_start)
+        )
 
-    # Fetch ALL weight log entries (for streak calculation)
-    wl_all_res = get_sb().table('fitness_weight_log').select('*').eq('user_id', user_id).order('date').execute()
-    all_weight_entries = wl_all_res.data or []
+        wl_all_res = get_sb().table('fitness_weight_log').select('*').eq('user_id', user_id).order('date').execute()
+        all_weight_entries = wl_all_res.data or []
 
-    # Filter weight log to last 30 days for the response
-    thirty_days_ago = str(date.today() - timedelta(days=30))
-    weight_log = [e for e in all_weight_entries if e.get('date', '') >= thirty_days_ago]
+        thirty_days_ago = str(date.today() - timedelta(days=30))
+        weight_log = [e for e in all_weight_entries if e.get('date', '') >= thirty_days_ago]
 
-    # All weight dates (for frontend streak visualization if needed)
-    all_weight_dates = sorted(set(e['date'] for e in all_weight_entries if e.get('date')))
+        all_weight_dates = sorted(set(e['date'] for e in all_weight_entries if e.get('date')))
 
-    # Calculate weight-logging streak
-    weight_streak = _calculate_weight_streak(all_weight_entries)
+        weight_streak = _calculate_weight_streak(all_weight_entries)
 
-    # Determine latest weight
-    latest_weight = None
-    if all_weight_entries:
-        latest_weight = all_weight_entries[-1].get('weight')
+        latest_weight = None
+        if all_weight_entries:
+            latest_weight = all_weight_entries[-1].get('weight')
 
-    # Calculate BMI using latest weight (or profile weight as fallback)
-    bmi_weight = latest_weight if latest_weight is not None else profile.get('weight')
-    bmi_value, bmi_category = _calculate_bmi(
-        bmi_weight,
-        profile.get('weight_unit', 'kg'),
-        profile.get('height'),
-        profile.get('height_unit', 'cm'),
-    )
+        bmi_weight = latest_weight if latest_weight is not None else profile.get('weight')
+        bmi_value, bmi_category = _calculate_bmi(
+            bmi_weight,
+            profile.get('weight_unit', 'kg'),
+            profile.get('height'),
+            profile.get('height_unit', 'cm'),
+        )
 
-    weekly_workouts = []
-    if workouts:
-        from collections import Counter
-        week_counts = Counter()
-        for w in workouts:
-            if w.get('completed') and w.get('date'):
-                d = w['date']
-                wk = d[:7]
-                week_counts[wk] += 1
-        for wk in sorted(week_counts.keys())[-8:]:
-            weekly_workouts.append({'week': wk, 'count': week_counts[wk]})
+        weekly_workouts = []
+        if workouts:
+            from collections import Counter
+            week_counts = Counter()
+            for w in workouts:
+                if w.get('completed') and w.get('date'):
+                    d = w['date']
+                    wk = d[:7]
+                    week_counts[wk] += 1
+            for wk in sorted(week_counts.keys())[-8:]:
+                weekly_workouts.append({'week': wk, 'count': week_counts[wk]})
 
-    total_workouts = sum(1 for w in workouts if w.get('completed'))
-    max_streak = profile.get('streak', 0)
+        total_workouts = sum(1 for w in workouts if w.get('completed'))
+        max_streak = profile.get('streak', 0)
 
-    all_workouts = [{'date': w['date']} for w in workouts if w.get('completed') and w.get('date')]
+        all_workouts = [{'date': w['date']} for w in workouts if w.get('completed') and w.get('date')]
 
-    meals_res = get_sb().table('fitness_meals').select('*').eq('user_id', user_id).eq('date', today_str).execute()
-    today_meals = meals_res.data[0] if meals_res.data else None
+        meals_res = get_sb().table('fitness_meals').select('*').eq('user_id', user_id).eq('date', today_str).execute()
+        today_meals = meals_res.data[0] if meals_res.data else None
 
-    steps_res = get_sb().table('fitness_steps').select('*').eq('user_id', user_id).eq('date', today_str).execute()
-    today_steps = steps_res.data[0] if steps_res.data else None
+        try:
+            steps_res = get_sb().table('fitness_steps').select('*').eq('user_id', user_id).eq('date', today_str).execute()
+            today_steps = steps_res.data[0] if steps_res.data else None
+        except Exception:
+            today_steps = None
 
-    return jsonify(
-        profile=profile,
-        today_workout=today_workout,
-        workouts_this_week=workouts_this_week,
-        weight_log=weight_log,
-        weight_log_all=all_weight_dates,
-        weekly_workouts=weekly_workouts,
-        total_workouts=total_workouts,
-        max_streak=max_streak,
-        all_workouts=all_workouts,
-        today_meals=today_meals,
-        today_steps=today_steps,
-        weight_streak=weight_streak,
-        bmi=bmi_value,
-        bmi_category=bmi_category,
-        latest_weight=latest_weight,
-    )
+        return jsonify(
+            profile=profile,
+            today_workout=today_workout,
+            workouts_this_week=workouts_this_week,
+            weight_log=weight_log,
+            weight_log_all=all_weight_dates,
+            weekly_workouts=weekly_workouts,
+            total_workouts=total_workouts,
+            max_streak=max_streak,
+            all_workouts=all_workouts,
+            today_meals=today_meals,
+            today_steps=today_steps,
+            weight_streak=weight_streak,
+            bmi=bmi_value,
+            bmi_category=bmi_category,
+            latest_weight=latest_weight,
+        )
+    except Exception as e:
+        print(f"Profile data fetch error: {e}", flush=True)
+        return jsonify(profile=profile, error='Some data failed to load'), 200
 
 
 @fitness_bp.route('/fitness/onboarding', methods=['POST'])
+@require_plan('message')
 def onboarding():
     data = request.json
     user_id = data.get('user_id')
@@ -420,6 +428,7 @@ def complete_workout():
 
 
 @fitness_bp.route('/fitness/chat', methods=['POST'])
+@require_plan('message')
 def chat():
     data = request.json
     user_id = data.get('user_id')
@@ -489,6 +498,7 @@ def chat_history():
 
 
 @fitness_bp.route('/fitness/scan-food', methods=['POST'])
+@require_plan('vision')
 def scan_food():
     data = request.json
     user_id = data.get('user_id')
@@ -515,6 +525,7 @@ def scan_food():
 
 
 @fitness_bp.route('/fitness/generate-meals', methods=['POST'])
+@require_plan('message')
 def generate_meals():
     data = request.json
     user_id = data.get('user_id')
@@ -661,6 +672,7 @@ def set_step_goal():
 
 
 @fitness_bp.route('/fitness/explain-exercise', methods=['POST'])
+@require_plan('message')
 def explain_exercise():
     data = request.json
     exercise_name = data.get('exercise_name', '')
@@ -690,6 +702,7 @@ Keep it concise and practical. Use a motivating, trainer-like tone."""
 
 
 @fitness_bp.route('/fitness/adjust-program', methods=['POST'])
+@require_plan('message')
 def adjust_program():
     data = request.json
     user_id = data.get('user_id')
